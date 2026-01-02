@@ -152,28 +152,36 @@ public class AgronomyController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<List<AgronomyGuideResponseDto>>>> GetAllGuidesByDistrictAndSoil(int districtId, int soilTypeId)
     {
+        // Redirect to new search method
+        return await SearchGuides(districtId, soilTypeId);
+    }
+
+    /// <summary>
+    /// Search agronomy guides by district and optional soil type
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(ApiResponse<List<AgronomyGuideResponseDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse<List<AgronomyGuideResponseDto>>>> SearchGuides(
+        [FromQuery] int districtId, 
+        [FromQuery] int? soilTypeId = null)
+    {
         try
         {
-            if (districtId <= 0 || soilTypeId <= 0)
+            if (districtId <= 0)
             {
-                return BadRequest(ApiResponse<object>.ErrorResponse("Invalid district ID or soil type ID"));
+                return BadRequest(ApiResponse<object>.ErrorResponse("District ID is required"));
             }
 
-            _logger.LogInformation("Fetching guides for District: {DistrictId}, Soil: {SoilTypeId}", districtId, soilTypeId);
-            var guides = await _agronomyService.GetAllGuidesByDistrictAndSoilAsync(districtId, soilTypeId);
+            _logger.LogInformation("Searching guides for District: {DistrictId}, SoilCode: {SoilTypeId}", districtId, soilTypeId);
+            var guides = await _agronomyService.SearchGuidesAsync(districtId, soilTypeId);
             _logger.LogInformation("Successfully retrieved {Count} guides", guides.Count);
             return Ok(ApiResponse<List<AgronomyGuideResponseDto>>.SuccessResponse(guides, "Guides retrieved successfully"));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving guides for District: {DistrictId}, Soil: {SoilTypeId}. Error: {Message}. InnerException: {InnerException}. StackTrace: {StackTrace}", 
-                districtId, soilTypeId, ex.Message, ex.InnerException?.Message ?? "None", ex.StackTrace);
-            var errorMessage = $"An error occurred while retrieving guides: {ex.Message}";
-            if (ex.InnerException != null)
-            {
-                errorMessage += $" Inner: {ex.InnerException.Message}";
-            }
-            return StatusCode(500, ApiResponse<object>.ErrorResponse(errorMessage));
+            _logger.LogError(ex, "Error searching guides for District: {DistrictId}, Soil: {SoilTypeId}. Error: {Message}", districtId, soilTypeId, ex.Message);
+            return StatusCode(500, ApiResponse<object>.ErrorResponse($"An error occurred while searching guides: {ex.Message}"));
         }
     }
 

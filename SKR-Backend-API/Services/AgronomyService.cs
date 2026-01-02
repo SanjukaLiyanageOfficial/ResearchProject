@@ -68,9 +68,14 @@ public class AgronomyService : IAgronomyService
 
     public async Task<List<AgronomyGuideResponseDto>> GetAllGuidesByDistrictAndSoilAsync(int districtId, int soilTypeId)
     {
+        return await SearchGuidesAsync(districtId, soilTypeId);
+    }
+
+    public async Task<List<AgronomyGuideResponseDto>> SearchGuidesAsync(int districtId, int? soilTypeId)
+    {
         try
         {
-            var guides = await _agronomyRepository.GetAllGuidesByDistrictAndSoilAsync(districtId, soilTypeId);
+            var guides = await _agronomyRepository.SearchGuidesAsync(districtId, soilTypeId);
             
             var result = new List<AgronomyGuideResponseDto>();
             foreach (var guide in guides)
@@ -111,7 +116,7 @@ public class AgronomyService : IAgronomyService
         }
         catch (Exception ex)
         {
-            throw new Exception($"Error in GetAllGuidesByDistrictAndSoilAsync: {ex.Message}", ex);
+            throw new Exception($"Error in SearchGuidesAsync: {ex.Message}", ex);
         }
     }
 

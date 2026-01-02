@@ -83,5 +83,35 @@ public class AgronomyRepository : IAgronomyRepository
         
         return guides;
     }
+
+    public async Task<List<AgronomyGuide>> SearchGuidesAsync(int districtId, int? soilTypeId)
+    {
+        var query = _context.AgronomyGuides
+            .Where(ag => ag.DistrictId == districtId)
+            .Include(ag => ag.District)
+            .Include(ag => ag.SoilType)
+            .Include(ag => ag.Variety)
+            .Include(ag => ag.Steps)
+            .AsQueryable();
+
+        if (soilTypeId.HasValue)
+        {
+            query = query.Where(ag => ag.SoilTypeId == soilTypeId.Value);
+        }
+
+        var guides = await query.ToListAsync();
+        
+        // Order guides by variety name and steps by step number after materializing
+        guides = guides.OrderBy(ag => ag.Variety?.Name ?? string.Empty).ToList();
+        foreach (var guide in guides)
+        {
+            if (guide.Steps != null)
+            {
+                guide.Steps = guide.Steps.OrderBy(s => s.StepNumber).ToList();
+            }
+        }
+        
+        return guides;
+    }
 }
 
