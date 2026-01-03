@@ -139,6 +139,40 @@ class SeasonDetailsPage extends ConsumerWidget {
                             error: (_, __) => const SizedBox.shrink(),
                           ),
                           _buildInfoRow(context, 'Harvest Period', season.period),
+                          _buildInfoRow(context, 'Total Yield', '${season.totalHarvestedYield.toStringAsFixed(2)} kg'),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                'Status: ',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: season.status == 'season-end' ? Colors.red[100] : Colors.green[100],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  season.status == 'season-end' ? 'Ended' : 'Active',
+                                  style: TextStyle(
+                                    color: season.status == 'season-end' ? Colors.red[800] : Colors.green[800],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (season.status != 'season-end') ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () => _endSeason(context, ref),
+                                child: const Text('End Season'),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -205,6 +239,7 @@ class SeasonDetailsPage extends ConsumerWidget {
                               );
                               if (result == true) {
                                 ref.invalidate(sessionControllerProvider(seasonId));
+                                ref.invalidate(seasonProvider(seasonId)); // Also refresh season to get updated yield
                               }
                             },
                           );
@@ -266,22 +301,26 @@ class SeasonDetailsPage extends ConsumerWidget {
         ),
       ),
       floatingActionButton: seasonAsync.when(
-        data: (_) => FloatingActionButton.extended(
-          heroTag: 'season_details_fab',
-          onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CreateSessionPage(seasonId: seasonId),
-              ),
-            );
-            if (result == true && context.mounted) {
-              // Refresh sessions list
-            }
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Add Session'),
-        ),
+        data: (season) {
+          if (season.status == 'season-end') return const SizedBox.shrink();
+          return FloatingActionButton.extended(
+            heroTag: 'season_details_fab',
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreateSessionPage(seasonId: seasonId),
+                ),
+              );
+              if (result == true && context.mounted) {
+                ref.invalidate(sessionControllerProvider(seasonId));
+                ref.invalidate(seasonProvider(seasonId)); // Refresh season for yield
+              }
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Session'),
+          );
+        },
         loading: () => const SizedBox.shrink(),
         error: (_, __) => const SizedBox.shrink(),
       ),
@@ -312,6 +351,44 @@ class SeasonDetailsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _endSeason(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('End Season'),
+        content: const Text('Are you sure you want to end this season? You will not be able to add new harvesting sessions.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('End Season'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(seasonControllerProvider.notifier).endSeason(seasonId);
+        ref.invalidate(seasonProvider(seasonId)); // Refresh details
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Season ended successfully')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${e.toString()}')),
+          );
+        }
+      }
+    }
   }
 }
 

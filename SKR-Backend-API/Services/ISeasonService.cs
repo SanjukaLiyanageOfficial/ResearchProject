@@ -10,6 +10,7 @@ public interface ISeasonService
     Task<IEnumerable<Season>> GetSeasonsByFarmIdAsync(string farmId);
     Task<Season?> GetSeasonByIdAsync(string seasonId);
     Task<Season?> UpdateSeasonAsync(string seasonId, UpdateSeasonDto updateDto);
+    Task<bool> EndSeasonAsync(string seasonId);
     Task<bool> DeleteSeasonAsync(string seasonId);
 }
 

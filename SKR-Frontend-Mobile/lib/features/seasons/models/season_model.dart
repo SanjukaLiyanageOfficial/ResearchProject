@@ -15,6 +15,8 @@ class SeasonModel {
   final String farmId;
   final String createdBy;
   final DateTime createdAt;
+  final double totalHarvestedYield;
+  final String status;
 
   SeasonModel({
     required this.id,
@@ -27,6 +29,8 @@ class SeasonModel {
     required this.farmId,
     required this.createdBy,
     required this.createdAt,
+    this.totalHarvestedYield = 0.0,
+    this.status = 'season-start',
   });
 
   factory SeasonModel.fromJson(Map<String, dynamic> json) {
@@ -72,7 +76,17 @@ class SeasonModel {
       farmId: farmIdString,
       createdBy: (json['createdBy'] ?? json['CreatedBy'] ?? '').toString(),
       createdAt: _parseDateTime(json['createdAt'] ?? json['CreatedAt']),
+      totalHarvestedYield: _parseDouble(json['totalHarvestedYield'] ?? json['TotalHarvestedYield']),
+      status: (json['status'] ?? json['Status'] ?? 'season-start').toString(),
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0.0;
   }
 
   static int _parseInt(dynamic value) {

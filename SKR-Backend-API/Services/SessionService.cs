@@ -22,6 +22,12 @@ public class SessionService : ISessionService
         if (season == null)
             throw new ArgumentException("Season not found", nameof(createDto.SeasonId));
 
+        // Validate Status
+        if (season.Status == "season-end")
+        {
+            throw new InvalidOperationException("Cannot add session to an ended season");
+        }
+
         // Convert string SeasonId to Guid
         if (!Guid.TryParse(createDto.SeasonId, out var guidSeasonId))
         {
@@ -54,7 +60,13 @@ public class SessionService : ISessionService
             Notes = createDto.Notes
         };
 
-        return await _sessionRepository.CreateAsync(session);
+        var createdSession = await _sessionRepository.CreateAsync(session);
+
+        // Update Season Total Yield
+        season.TotalHarvestedYield += session.YieldKg;
+        await _seasonRepository.UpdateAsync(season.Id.ToString(), season);
+
+        return createdSession;
     }
 
     public async Task<IEnumerable<Session>> GetSessionsBySeasonIdAsync(string seasonId)
@@ -111,7 +123,22 @@ public class SessionService : ISessionService
 
     public async Task<bool> DeleteSessionAsync(string sessionId)
     {
-        return await _sessionRepository.DeleteAsync(sessionId);
+        var session = await _sessionRepository.GetByIdAsync(sessionId);
+        if (session == null) return false;
+
+        var deleted = await _sessionRepository.DeleteAsync(sessionId);
+        if (deleted)
+        {
+            var season = await _seasonRepository.GetByIdAsync(session.SeasonId.ToString());
+            if (season != null)
+            {
+                season.TotalHarvestedYield -= session.YieldKg;
+                if (season.TotalHarvestedYield < 0) season.TotalHarvestedYield = 0; // Prevent negative yield
+                await _seasonRepository.UpdateAsync(season.Id.ToString(), season);
+            }
+        }
+
+        return deleted;
     }
 }
 
