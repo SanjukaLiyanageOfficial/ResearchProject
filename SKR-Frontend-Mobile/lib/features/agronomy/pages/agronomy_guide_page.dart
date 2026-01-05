@@ -34,7 +34,7 @@ final soilsByDistrictProvider = FutureProvider.family<List<SoilType>, int>(
 // Using a custom key class to ensure stable comparison
 class DistrictSoilKey {
   final int districtId;
-  final int soilTypeId;
+  final int? soilTypeId; // Made optional
 
   DistrictSoilKey(this.districtId, this.soilTypeId);
 
@@ -53,7 +53,7 @@ class DistrictSoilKey {
 final allGuidesByDistrictAndSoilProvider = FutureProvider.family<List<AgronomyGuideResponse>, DistrictSoilKey>(
   (ref, key) async {
     final service = ref.read(agronomyServiceProvider);
-    return await service.fetchAllGuidesByDistrictAndSoil(
+    return await service.searchGuides(
       key.districtId,
       key.soilTypeId,
     );
@@ -107,9 +107,40 @@ class AgronomyGuidePage extends ConsumerStatefulWidget {
 class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
   District? _selectedDistrict;
   SoilType? _selectedSoilType;
+  bool _hasSearched = false; // Track if user has clicked search
   
   // Memoized key to prevent recreation on every build
   DistrictSoilKey? _cachedGuidesKey;
+
+  void _handleSearch() {
+    if (_selectedDistrict == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a district to search.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _hasSearched = true;
+      _cachedGuidesKey = DistrictSoilKey(
+        _selectedDistrict!.id, 
+        _selectedSoilType?.id
+      );
+    });
+  }
+
+  void _handleRefresh() {
+    ref.invalidate(districtsProvider);
+    if (_selectedDistrict != null) {
+      ref.invalidate(soilsByDistrictProvider(_selectedDistrict!.id));
+    }
+    if (_hasSearched && _cachedGuidesKey != null) {
+      ref.invalidate(allGuidesByDistrictAndSoilProvider(_cachedGuidesKey!));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,17 +150,7 @@ class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
         elevation: 0,
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(districtsProvider);
-          if (_selectedDistrict != null) {
-            ref.invalidate(soilsByDistrictProvider(_selectedDistrict!.id));
-          }
-          if (_selectedDistrict != null && _selectedSoilType != null) {
-            ref.invalidate(allGuidesByDistrictAndSoilProvider(
-              DistrictSoilKey(_selectedDistrict!.id, _selectedSoilType!.id),
-            ));
-          }
-        },
+        onRefresh: () async => _handleRefresh(),
         child: CustomScrollView(
           slivers: [
           // Header section with district selection
@@ -197,20 +218,44 @@ class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
                       const SizedBox(height: 16),
                       _buildSoilTypeDropdown(),
                     ],
+                    const SizedBox(height: 24),
+                    // Search Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _handleSearch,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Theme.of(context).colorScheme.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'SEARCH GUIDES',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
           // Guide Content
-          _selectedDistrict == null || _selectedSoilType == null
+          !_hasSearched
               ? SliverFillRemaining(
                   hasScrollBody: false,
                   child: EmptyState(
                     message: _selectedDistrict == null
-                        ? 'Select a district to get started.'
-                        : 'Select a soil type for ${_selectedDistrict!.name}.',
-                    icon: Icons.agriculture_outlined,
+                        ? 'Select a district to search.'
+                        : 'Click search to find varieties.',
+                    icon: Icons.search,
                   ),
                 )
               : _buildGuidesContentSliver(),
@@ -250,16 +295,19 @@ class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
                 child: Text(district.name),
               );
             }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedDistrict = value;
-                            _selectedSoilType = null;
-                            _cachedGuidesKey = null; // Reset cached key
-                          });
-                          if (value != null) {
-                            ref.invalidate(soilsByDistrictProvider(value.id));
-                          }
-                        },
+            onChanged: (value) {
+              setState(() {
+                _selectedDistrict = value;
+                _selectedSoilType = null;
+                // Don't reset _hasSearched immediately if you want to keep results 
+                // until new search, but usually changing inputs should invalidate results.
+                _hasSearched = false; 
+                _cachedGuidesKey = null;
+              });
+              if (value != null) {
+                ref.invalidate(soilsByDistrictProvider(value.id));
+              }
+            },
           ),
         );
       },
@@ -285,17 +333,17 @@ class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
           return Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange[50],
+              color: Colors.white.withOpacity(0.9), // Improved visibility on colored bg
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.orange[700]),
+                Icon(Icons.info_outline, color: Colors.orange[800]),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'No soil types available for ${_selectedDistrict!.name}',
-                    style: TextStyle(color: Colors.orange[700]),
+                    'No soil types specific to this district found.',
+                    style: TextStyle(color: Colors.grey[800], fontSize: 13),
                   ),
                 ),
               ],
@@ -314,23 +362,31 @@ class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
             decoration: InputDecoration(
               border: InputBorder.none,
               prefixIcon: const Icon(Icons.landscape, color: Colors.grey),
-              hintText: 'Select Soil Type',
+              hintText: 'Select Soil Type (Optional)', // Updated hint
               hintStyle: TextStyle(color: Colors.grey[600]),
             ),
             icon: Icon(
               Icons.arrow_drop_down,
               color: Theme.of(context).colorScheme.primary,
             ),
-            items: soils.map((soil) {
-              return DropdownMenuItem(
-                value: soil,
-                child: Text(soil.typeName),
-              );
-            }).toList(),
+            items: [
+              // Add option to deselect soil type
+              const DropdownMenuItem<SoilType>(
+                value: null,
+                child: Text('All Soil Types', style: TextStyle(color: Colors.black)),
+              ),
+              ...soils.map((soil) {
+                return DropdownMenuItem(
+                  value: soil,
+                  child: Text(soil.typeName),
+                );
+              }),
+            ],
             onChanged: (value) {
               setState(() {
                 _selectedSoilType = value;
-                _cachedGuidesKey = null; // Reset cached key
+                _hasSearched = false; // Require re-search on change
+                _cachedGuidesKey = null;
               });
             },
           ),
@@ -348,15 +404,10 @@ class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
   }
 
   Widget _buildGuidesContentSliver() {
-    if (_selectedDistrict == null || _selectedSoilType == null) {
+    if (!_hasSearched || _cachedGuidesKey == null) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    // Use a stable key to prevent unnecessary rebuilds - only recreate if values changed
-    final currentKey = DistrictSoilKey(_selectedDistrict!.id, _selectedSoilType!.id);
-    if (_cachedGuidesKey == null || _cachedGuidesKey != currentKey) {
-      _cachedGuidesKey = currentKey;
-    }
     final guidesAsync = ref.watch(allGuidesByDistrictAndSoilProvider(_cachedGuidesKey!));
 
     return guidesAsync.when(
@@ -365,8 +416,8 @@ class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
           return SliverFillRemaining(
             hasScrollBody: false,
             child: EmptyState(
-              message: 'No planting guides found for ${_selectedDistrict!.name} - ${_selectedSoilType!.typeName}.',
-              icon: Icons.info_outline,
+              message: 'No planting guides found matching your criteria.',
+              icon: Icons.search_off,
             ),
           );
         }
@@ -374,7 +425,7 @@ class _AgronomyGuidePageState extends ConsumerState<AgronomyGuidePage> {
       },
       loading: () => const SliverFillRemaining(
         hasScrollBody: false,
-        child: LoadingSpinner(message: 'Loading planting guides...'),
+        child: LoadingSpinner(message: 'Searching planting guides...'),
       ),
       error: (error, stack) => SliverFillRemaining(
         hasScrollBody: false,

@@ -231,6 +231,32 @@ class SeasonService {
     }
   }
 
+  Future<void> endSeason(String seasonId) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '${AppConstants.seasonsBase}/$seasonId/end',
+      );
+
+      final apiResponse = ApiResponseModel<dynamic>.fromJson(
+        response.data,
+        (json) => json,
+      );
+
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message);
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final apiResponse = ApiResponseModel<dynamic>.fromJson(
+          e.response!.data,
+          (json) => json,
+        );
+        throw Exception(apiResponse.message);
+      }
+      throw Exception('Network error: ${e.message}');
+    }
+  }
+
   Future<void> deleteSeason(String seasonId) async {
     try {
       final response = await _apiClient.dio.delete(

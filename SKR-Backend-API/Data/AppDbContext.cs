@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<DistrictSoil> DistrictSoils { get; set; } = null!;
     public DbSet<AgronomyGuide> AgronomyGuides { get; set; } = null!;
     public DbSet<GuideStep> GuideSteps { get; set; } = null!;
+    public DbSet<PepperKnowledge> PepperKnowledge { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -297,7 +298,21 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
             
             // Unique constraint: GuideId + StepNumber combination must be unique
+            // Unique constraint: GuideId + StepNumber combination must be unique
             entity.HasIndex(e => new { e.GuideId, e.StepNumber }).IsUnique();
+        });
+
+        modelBuilder.HasPostgresExtension("vector");
+
+        // Configure PepperKnowledge entity
+        modelBuilder.Entity<PepperKnowledge>(entity =>
+        {
+            entity.ToTable("pepperknowledge");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Category).HasMaxLength(100);
+            entity.Property(e => e.Title).HasMaxLength(255);
+            entity.Property(e => e.Content).HasColumnType("text");
+            entity.Property(e => e.Embedding).HasColumnType("vector(1536)");
         });
         
         // Configure PostgreSQL naming convention (lowercase) - Run AFTER all entity configurations

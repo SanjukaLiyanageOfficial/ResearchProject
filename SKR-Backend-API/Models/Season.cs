@@ -30,6 +30,13 @@ public class Season
     [Column("farmid")]
     public Guid FarmId { get; set; }
 
+    [Column("totalharvestedyield", TypeName = "numeric")]
+    public decimal TotalHarvestedYield { get; set; } = 0;
+
+    [MaxLength(50)]
+    [Column("status")]
+    public string Status { get; set; } = "season-start";
+
     [Required]
     [Column("createdby")]
     public Guid CreatedBy { get; set; }

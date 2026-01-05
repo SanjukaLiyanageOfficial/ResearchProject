@@ -11,6 +11,8 @@ import '../../../../core/utils/constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import 'dart:developer' as developer;
 
+import '../../chat/pages/chat_page.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -28,7 +30,7 @@ class _HomePageState extends State<HomePage> {
       icon: Icons.eco,
       color: Colors.teal,
       route: (context) => const AgronomyGuidePage(),
-    ),
+    ),    
     ActionCard(
       title: 'Plantation',
       icon: Icons.agriculture,
@@ -46,6 +48,12 @@ class _HomePageState extends State<HomePage> {
       icon: Icons.trending_up,
       color: Colors.purple,
       route: (context) => const PredictionPage(),
+    ),
+    ActionCard(
+      title: 'AI Chat Assistant',
+      icon: Icons.chat_bubble_outline,
+      color: Colors.indigo,
+      route: (context) => const ChatPage(),
     ),
     ActionCard(
       title: 'Profile',

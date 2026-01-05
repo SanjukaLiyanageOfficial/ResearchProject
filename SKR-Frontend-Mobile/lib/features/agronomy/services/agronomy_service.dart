@@ -186,9 +186,20 @@ class AgronomyService {
 
   /// Fetches all guides (with variety details and steps) for a specific district and soil type combination
   Future<List<AgronomyGuideResponse>> fetchAllGuidesByDistrictAndSoil(int districtId, int soilTypeId) async {
+    return searchGuides(districtId, soilTypeId);
+  }
+
+  /// Searches for agronomy guides by district and optional soil type
+  Future<List<AgronomyGuideResponse>> searchGuides(int districtId, int? soilTypeId) async {
     try {
+      final Map<String, dynamic> queryParams = {'districtId': districtId};
+      if (soilTypeId != null) {
+        queryParams['soilTypeId'] = soilTypeId;
+      }
+
       final response = await _apiClient.dio.get(
-        '${AppConstants.agronomyBase}/districts/$districtId/soils/$soilTypeId/guides',
+        '${AppConstants.agronomyBase}/search',
+        queryParameters: queryParams,
       );
 
       final apiResponse = ApiResponseModel<List<AgronomyGuideResponse>>.fromJson(
@@ -213,7 +224,7 @@ class AgronomyService {
             e.response!.data.toString().isEmpty || 
             (e.response!.data is String && (e.response!.data as String).isEmpty)) {
           if (e.response!.statusCode == 404) {
-            throw Exception('No guides found for the selected district and soil type combination.');
+            throw Exception('No guides found for the selected criteria.');
           }
           throw Exception('Server returned an empty response');
         }
@@ -228,7 +239,7 @@ class AgronomyService {
         } catch (parseError) {
           // If parsing fails, use status code message
           if (e.response!.statusCode == 404) {
-            throw Exception('No guides found for the selected district and soil type combination.');
+            throw Exception('No guides found for the selected criteria.');
           }
           throw Exception('Error: ${e.response!.statusCode}');
         }

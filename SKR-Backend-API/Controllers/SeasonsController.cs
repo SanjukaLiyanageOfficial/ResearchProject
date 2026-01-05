@@ -236,6 +236,54 @@ public class SeasonsController : ControllerBase
     }
 
     /// <summary>
+    /// End a season
+    /// </summary>
+    [HttpPost("{seasonId}/end")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<object>>> EndSeason(string seasonId)
+    {
+        try
+        {
+            var userId = GetUserId();
+            
+            // Convert string userId to Guid for comparison
+            if (!Guid.TryParse(userId, out var guidUserId))
+            {
+                return Forbid();
+            }
+            
+            // Get existing season to verify ownership
+            var existingSeason = await _seasonService.GetSeasonByIdAsync(seasonId);
+            if (existingSeason == null)
+            {
+                return NotFound(ApiResponse<object>.ErrorResponse("Season not found"));
+            }
+
+            // Verify farm ownership
+            var farmIdString = existingSeason.FarmId.ToString();
+            var farm = await _plantationService.GetFarmByIdAsync(farmIdString);
+            if (farm == null || farm.UserId != guidUserId)
+            {
+                return Forbid();
+            }
+
+            var success = await _seasonService.EndSeasonAsync(seasonId);
+            if (!success)
+            {
+                return NotFound(ApiResponse<object>.ErrorResponse("Season not found"));
+            }
+
+            return Ok(ApiResponse<object>.SuccessResponse("Season ended successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ending season {SeasonId}", seasonId);
+            return StatusCode(500, ApiResponse<object>.ErrorResponse("An error occurred while ending the season"));
+        }
+    }
+
+    /// <summary>
     /// Delete a season
     /// </summary>
     [HttpDelete("{seasonId}")]

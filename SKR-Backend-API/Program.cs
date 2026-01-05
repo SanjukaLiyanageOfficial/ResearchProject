@@ -58,7 +58,7 @@ if (string.IsNullOrEmpty(connectionString))
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString, o => o.UseVector()));
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -104,6 +104,10 @@ builder.Services.AddScoped<IAgronomyService, AgronomyService>();
 builder.Services.AddScoped<IPlantationService, PlantationService>();
 builder.Services.AddScoped<IEmergencyService, EmergencyService>();
 builder.Services.AddSingleton<IPricePredictionService, PricePredictionService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
+builder.Services.AddScoped<IKnowledgeRetrievalService, KnowledgeRetrievalService>();
+builder.Services.AddScoped<PepperKnowledgeSeeder>();
 
 // Add CORS if needed
 builder.Services.AddCors(options =>

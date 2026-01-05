@@ -88,6 +88,17 @@ public class SeasonService : ISeasonService
         return await _seasonRepository.UpdateAsync(seasonId, existingSeason);
     }
 
+    public async Task<bool> EndSeasonAsync(string seasonId)
+    {
+        var existingSeason = await _seasonRepository.GetByIdAsync(seasonId);
+        if (existingSeason == null)
+            return false;
+
+        existingSeason.Status = "season-end";
+        var updated = await _seasonRepository.UpdateAsync(seasonId, existingSeason);
+        return updated != null;
+    }
+
     public async Task<bool> DeleteSeasonAsync(string seasonId)
     {
         return await _seasonRepository.DeleteAsync(seasonId);

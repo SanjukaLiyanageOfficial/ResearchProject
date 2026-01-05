@@ -10,6 +10,7 @@ public interface IAgronomyService
     Task<List<District>> GetAllDistrictsAsync();
     Task<List<BlackPepperVariety>> GetVarietiesByDistrictAndSoilAsync(int districtId, int soilTypeId);
     Task<List<AgronomyGuideResponseDto>> GetAllGuidesByDistrictAndSoilAsync(int districtId, int soilTypeId);
+    Task<List<AgronomyGuideResponseDto>> SearchGuidesAsync(int districtId, int? soilTypeId);
     Task<List<BlackPepperVariety>> GetVarietiesByIdsAsync(List<string> ids);
     Task<BlackPepperVariety?> GetVarietyByIdAsync(string id);
     Task<List<BlackPepperVariety>> GetAllVarietiesAsync();

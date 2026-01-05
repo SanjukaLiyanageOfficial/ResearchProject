@@ -49,3 +49,6 @@ android/app/libs/
 # iOS
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
+
+# ML Models
+*.onnx
