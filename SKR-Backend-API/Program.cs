@@ -106,6 +106,7 @@ builder.Services.AddScoped<IEmergencyService, EmergencyService>();
 builder.Services.AddSingleton<IPricePredictionService, PricePredictionService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
+builder.Services.AddScoped<ISoftContextExtractor, SoftContextExtractor>();
 builder.Services.AddScoped<IKnowledgeRetrievalService, KnowledgeRetrievalService>();
 builder.Services.AddScoped<PepperKnowledgeSeeder>();
 

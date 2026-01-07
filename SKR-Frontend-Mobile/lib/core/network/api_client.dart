@@ -13,7 +13,8 @@ class ApiClient {
   // Check your backend console output for the actual port when you run "dotnet run"
   // Common ports: 5000, 7001 (HTTP), 7000 (HTTPS)
   // For Android emulator, use 10.0.2.2 instead of localhost
-  static const String baseUrl = 'http://10.0.2.2:7001/api';
+  // UPDATED: Using LAN IP for Physical Device Support
+  static const String baseUrl = 'http://192.168.1.133:7001/api';
 
   ApiClient() {
     _dio = Dio(BaseOptions(
